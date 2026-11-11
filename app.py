@@ -1,5 +1,13 @@
 import io
 import math
+import time  # <-- Tambahkan ini untuk mengatur kecepatan animasi
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import numpy as np
+import pandas as pd
+import streamlit as st
+import io
+import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
