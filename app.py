@@ -1,13 +1,6 @@
 import io
 import math
-import time  # <-- Tambahkan ini untuk mengatur kecepatan animasi
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
-import pandas as pd
-import streamlit as st
-import io
-import math
+import time  
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
@@ -52,7 +45,6 @@ def draw_car(ax, x_center, y_center, text, color, direction='right'):
     ax.text(x_center, y_center, text, ha='center', va='center', 
             color='white', fontweight='bold', fontsize=7, zorder=4)
     
-    # Menggambar indikator lampu depan (headlights) untuk arah
     if direction == 'right':
         ax.plot([x_center + car_len/2, x_center + car_len/2], 
                 [y_center - car_wid/3, y_center + car_wid/3], color='yellow', lw=2, zorder=4)
@@ -110,31 +102,69 @@ def modul_jph():
         st.success("✅ Data ditambahkan ke tabel!")
 
     st.markdown("---")
-    
-    # ---------------- VISUALISASI JPH ----------------
-    st.subheader("🚗 Visualisasi Skematik Pergerakan Kendaraan (JPH)")
-    fig, ax = plt.subplots(figsize=(10, 3.5))
-    
-    # Gambar Jalan
-    ax.axhline(0, color='gray', lw=1, ls='--') 
-    # Gambar Mobil dan Halangan
-    draw_car(ax, 0, 0, 'MOBIL', '#1565C0')
-    ax.plot(jph_total, 0, marker='X', color='red', markersize=12, label='Halangan')
-    
-    # Anotasi Panah Jarak
-    ax.annotate('', xy=(jht, -1.5), xytext=(0, -1.5), arrowprops=dict(arrowstyle='|-|', color='#2E7D32', lw=2))
-    ax.text(jht/2, -2.5, f'Jht (Reaksi)\n{jht:.1f} m', ha='center', va='top', fontsize=9, color='#2E7D32')
-    
-    ax.annotate('', xy=(jph_total, -1.5), xytext=(jht, -1.5), arrowprops=dict(arrowstyle='|-|', color='#E65100', lw=2))
-    ax.text(jht + jhf/2, -2.5, f'Jhf (Pengereman)\n{jhf:.1f} m', ha='center', va='top', fontsize=9, color='#E65100')
-    
-    ax.axvline(x=jph_lapangan, color="red", linestyle="--", linewidth=1.5)
-    ax.text(jph_lapangan, 2, f' Jarak Lapangan ({jph_lapangan}m)', color='red', fontsize=9, va='center')
 
-    ax.set_xlim(-5, max(jph_total, jph_lapangan) + 15)
-    ax.set_ylim(-4, 3)
-    ax.axis('off')
-    st.pyplot(fig)
+    # ---------------- EVALUASI & GRAFIK STATIS JPH ----------------
+    col_eval1, col_eval2 = st.columns([1, 1])
+    with col_eval1:
+        st.subheader("🛡️ Evaluasi Keamanan Lokasi")
+        if status_aman == "AMAN":
+            st.success(f"### **DESAIN AMAN**\n* **Jarak Lapangan:** {jph_lapangan:.2f} m\n* **JPH Minimum:** {jph_total:.2f} m\n* **Kelebihan Jarak:** +{jph_lapangan - jph_total:.2f} m\n\nKondisi ruang bebas pandang di lokasi memenuhi syarat.")
+        else:
+            st.error(f"### **TIDAK AMAN**\n* **Jarak Lapangan:** {jph_lapangan:.2f} m\n* **JPH Minimum:** {jph_total:.2f} m\n* **Kekurangan Jarak:** -{jph_total - jph_lapangan:.2f} m\n\n**Rekomendasi Teknis:** Turunkan batas Kecepatan Rencana.")
+
+    with col_eval2:
+        st.subheader("📊 Grafik Komposisi JPH")
+        fig_bar, ax_bar = plt.subplots(figsize=(6, 2.8))
+        ax_bar.barh(["JPH Desain"], [jht], color="#2E7D32", label=f"Jht: {jht:.1f} m")
+        ax_bar.barh(["JPH Desain"], [jhf], left=[jht], color="#E65100", label=f"Jhf: {jhf:.1f} m")
+        ax_bar.set_xlabel("Jarak (meter)")
+        ax_bar.set_xlim(0, max(jph_total * 1.25, jph_lapangan * 1.15))
+        ax_bar.axvline(x=jph_lapangan, color="red", linestyle="--", linewidth=2, label=f"Batas Lapangan: {jph_lapangan:.0f} m")
+        ax_bar.legend(loc="upper right", fontsize=8)
+        plt.tight_layout()
+        st.pyplot(fig_bar)
+
+    st.markdown("---")
+    
+    # ---------------- VISUALISASI JPH (ANIMASI) ----------------
+    st.subheader("🚗 Visualisasi Animasi Pergerakan Kendaraan (JPH)")
+    
+    plot_placeholder = st.empty()
+    
+    def draw_jph_frame(car_x):
+        fig, ax = plt.subplots(figsize=(10, 3.5))
+        ax.axhline(0, color='gray', lw=1, ls='--') 
+        
+        draw_car(ax, car_x, 0, 'MOBIL', '#1565C0')
+        ax.plot(jph_total, 0, marker='X', color='red', markersize=12, label='Halangan')
+        
+        ax.annotate('', xy=(jht, -1.5), xytext=(0, -1.5), arrowprops=dict(arrowstyle='|-|', color='#2E7D32', lw=2))
+        ax.text(jht/2, -2.5, f'Jht (Reaksi)\n{jht:.1f} m', ha='center', va='top', fontsize=9, color='#2E7D32')
+        
+        ax.annotate('', xy=(jph_total, -1.5), xytext=(jht, -1.5), arrowprops=dict(arrowstyle='|-|', color='#E65100', lw=2))
+        ax.text(jht + jhf/2, -2.5, f'Jhf (Pengereman)\n{jhf:.1f} m', ha='center', va='top', fontsize=9, color='#E65100')
+        
+        ax.axvline(x=jph_lapangan, color="red", linestyle="--", linewidth=1.5)
+        ax.text(jph_lapangan, 2, f' Jarak Lapangan ({jph_lapangan}m)', color='red', fontsize=9, va='center')
+
+        ax.set_xlim(-5, max(jph_total, jph_lapangan) + 15)
+        ax.set_ylim(-4, 3)
+        ax.axis('off')
+        return fig
+
+    fig_awal = draw_jph_frame(0)
+    plot_placeholder.pyplot(fig_awal)
+    plt.close(fig_awal)
+
+    if st.button("🎬 Jalankan Animasi Pengereman (JPH)"):
+        total_frame = 30 
+        for i in range(total_frame + 1):
+            current_x = (jph_total / total_frame) * i
+            fig_frame = draw_jph_frame(current_x)
+            plot_placeholder.pyplot(fig_frame)
+            plt.close(fig_frame)
+            time.sleep(0.05)
+        st.success("🏁 Kendaraan berhasil berhenti pada jarak desain minimum.")
 
     st.markdown("---")
     st.subheader("📑 Tabel Rekapitulasi Data JPH")
@@ -149,7 +179,7 @@ def modul_jph():
         with col_btn1:
             st.download_button("📥 Download Excel", data=buffer.getvalue(), file_name="Rekap_JPH.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         with col_btn2:
-            if st.button("🗑️ Hapus Data"):
+            if st.button("🗑️ Hapus Data JPH"):
                 st.session_state.riwayat_jph = []
                 st.rerun()
     else:
@@ -169,7 +199,6 @@ def modul_jpm():
         v = st.number_input("Kecepatan Kendaraan yang Mendahului (v) [km/jam]", min_value=30.0, max_value=120.0, value=80.0, step=5.0)
         m = st.number_input("Beda Kecepatan dengan Kendaraan Lambat (m) [km/jam]", min_value=10.0, max_value=25.0, value=15.0, step=1.0)
 
-        # Regresi otomatis
         t1_auto = 2.12 + (0.026 * v)
         t2_auto = 6.56 + (0.052 * v)
         a_auto = 2.05 + (0.0035 * v)
@@ -193,7 +222,6 @@ def modul_jpm():
 
     st.markdown("---")
     
-    # Perhitungan Komponen JPM
     d1 = 0.278 * t1 * (v - m + (a * t1 / 2))
     d2 = 0.278 * v * t2
     d4 = (2 / 3) * d2
@@ -209,42 +237,62 @@ def modul_jpm():
     st.metric(label="Total Jarak Pandang Mendahului (JPM) Minimum", value=f"{jpm_total:.2f} m")
 
     st.markdown("---")
-    # ---------------- VISUALISASI JPM ----------------
-    st.subheader("🚗 Visualisasi Skematik Pergerakan Kendaraan (JPM)")
-    fig2, ax2 = plt.subplots(figsize=(10, 4.5))
-    
-    # Gambar Garis Jalan (2 Lajur)
-    ax2.axhline(1.5, color='gray', lw=2) # Tepi atas
-    ax2.axhline(0, color='black', lw=1.5, ls='--') # Marka putus-putus tengah
-    ax2.axhline(-1.5, color='gray', lw=2) # Tepi bawah
-    
-    # Gambar Posisi Kendaraan
-    draw_car(ax2, 0, -0.75, 'A1 (Mulai)', '#1565C0') # Mobil Mendahului (Start)
-    draw_car(ax2, d1, -0.75, 'B (Lambat)', '#616161') # Mobil Lambat (Diasumsikan bergerak hingga d1)
-    draw_car(ax2, d1+d2, -0.75, 'A2 (Selesai)', '#1565C0') # Mobil Mendahului (Kembali ke kiri)
-    draw_car(ax2, d1+d2+d3+d4, 0.75, 'C1 (Awal)', '#C62828', direction='left') # Mobil Lawan (Start)
-    draw_car(ax2, d1+d2+d3, 0.75, 'C2 (Akhir)', '#C62828', direction='left') # Mobil Lawan (Berpapasan)
-    
-    # Garis lintasan mendahului
-    ax2.plot([2, d1/2, d1, d1+d2-d1/2, d1+d2-2], [-0.75, 0.75, 0.75, 0.75, -0.75], color='#1565C0', ls='--', alpha=0.5)
 
-    # Anotasi Jarak (d1, d2, d3, d4)
-    ax2.annotate('', xy=(d1, -2.5), xytext=(0, -2.5), arrowprops=dict(arrowstyle='|-|', color='#1565C0'))
-    ax2.text(d1/2, -3.2, f'd1\n{d1:.1f}m', ha='center', va='top', fontsize=9, color='#1565C0')
+    # ---------------- VISUALISASI JPM (ANIMASI) ----------------
+    st.subheader("🚗 Visualisasi Animasi Pergerakan Kendaraan (JPM)")
     
-    ax2.annotate('', xy=(d1+d2, -2.5), xytext=(d1, -2.5), arrowprops=dict(arrowstyle='|-|', color='#2E7D32'))
-    ax2.text(d1+d2/2, -3.2, f'd2\n{d2:.1f}m', ha='center', va='top', fontsize=9, color='#2E7D32')
+    plot_placeholder_jpm = st.empty()
     
-    ax2.annotate('', xy=(d1+d2+d3, -2.5), xytext=(d1+d2, -2.5), arrowprops=dict(arrowstyle='|-|', color='#E65100'))
-    ax2.text(d1+d2+d3/2, -3.2, f'd3\n{d3:.1f}m', ha='center', va='top', fontsize=9, color='#E65100')
-    
-    ax2.annotate('', xy=(d1+d2+d3+d4, 2.5), xytext=(d1+d2+d3, 2.5), arrowprops=dict(arrowstyle='|-|', color='#C62828'))
-    ax2.text(d1+d2+d3+d4/2, 2.7, f'd4 (Mobil Lawan)\n{d4:.1f}m', ha='center', va='bottom', fontsize=9, color='#C62828')
+    def draw_jpm_frame(car_a_x, car_b_x, car_c_x, car_a_y):
+        fig2, ax2 = plt.subplots(figsize=(10, 4.5))
+        
+        ax2.axhline(1.5, color='gray', lw=2)
+        ax2.axhline(0, color='black', lw=1.5, ls='--') 
+        ax2.axhline(-1.5, color='gray', lw=2)
+        
+        draw_car(ax2, car_a_x, car_a_y, 'A (Anda)', '#1565C0')
+        draw_car(ax2, car_b_x, -0.75, 'B (Lambat)', '#616161')
+        draw_car(ax2, car_c_x, 0.75, 'C (Lawan)', '#C62828', direction='left')
+        
+        ax2.plot([0, d1/2, d1, d1+d2-d1/2, d1+d2], [-0.75, 0.75, 0.75, 0.75, -0.75], color='#1565C0', ls='--', alpha=0.3)
 
-    ax2.set_xlim(-5, d1+d2+d3+d4 + 15)
-    ax2.set_ylim(-4, 4)
-    ax2.axis('off')
-    st.pyplot(fig2)
+        ax2.text(d1/2, -3.2, f'd1\n{d1:.1f}m', ha='center', va='top', fontsize=9, color='#1565C0')
+        ax2.text(d1+d2/2, -3.2, f'd2\n{d2:.1f}m', ha='center', va='top', fontsize=9, color='#2E7D32')
+        ax2.text(d1+d2+d3/2, -3.2, f'd3\n{d3:.1f}m', ha='center', va='top', fontsize=9, color='#E65100')
+        ax2.text(d1+d2+d3+d4/2, 2.7, f'd4 (Mobil Lawan)\n{d4:.1f}m', ha='center', va='bottom', fontsize=9, color='#C62828')
+
+        ax2.set_xlim(-5, d1+d2+d3+d4 + 15)
+        ax2.set_ylim(-4, 4)
+        ax2.axis('off')
+        return fig2
+
+    fig_awal_jpm = draw_jpm_frame(0, d1/2, d1+d2+d3+d4, -0.75)
+    plot_placeholder_jpm.pyplot(fig_awal_jpm)
+    plt.close(fig_awal_jpm)
+
+    if st.button("🎬 Jalankan Animasi Mendahului (JPM)"):
+        total_frame = 40 
+        for i in range(total_frame + 1):
+            progress = i / total_frame 
+            
+            car_a_x = progress * (d1 + d2)
+            if car_a_x < d1/2:
+                car_a_y = -0.75 + (car_a_x / (d1/2)) * 1.5 
+            elif car_a_x > (d1 + d2 - d1/2):
+                sisa_jarak = car_a_x - (d1 + d2 - d1/2)
+                car_a_y = 0.75 - (sisa_jarak / (d1/2)) * 1.5 
+            else:
+                car_a_y = 0.75 
+                
+            car_b_x = (d1/2) + (progress * (d1/2))
+            car_c_x = (d1+d2+d3+d4) - (progress * d4)
+            
+            fig_frame = draw_jpm_frame(car_a_x, car_b_x, car_c_x, car_a_y)
+            plot_placeholder_jpm.pyplot(fig_frame)
+            plt.close(fig_frame)
+            time.sleep(0.05)
+            
+        st.success("🏁 Manuver mendahului berhasil diselesaikan tepat pada jarak bebas aman (d3) dari mobil lawan.")
 
     st.markdown("---")
     st.subheader("🛣️ Evaluasi Lapangan & Marka Jalan")
